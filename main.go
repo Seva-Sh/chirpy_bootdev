@@ -29,10 +29,16 @@ func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 // handler that writes the number of request that have been counted
 func (cfg *apiConfig) handlerCount(w http.ResponseWriter, r *http.Request) {
 	val32 := cfg.fileserverHits.Load()
-	str := fmt.Sprintf("Hits: %d", val32)
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	htmlContent := fmt.Sprintf(`
+	<html>
+	  <body>
+	    <h1>Welcome, Chirpy Admin</h1>
+		<p>Chirpy has been visited %d times!</p>
+	  </body>
+	</html>`, val32)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(200)
-	w.Write([]byte(str))
+	w.Write([]byte(htmlContent))
 }
 
 // handler that resets apiConfig count to 0
@@ -50,9 +56,9 @@ func main() {
 		Handler: mux,
 	}
 
-	mux.HandleFunc("GET /healthz", handlerReadiness)
-	mux.HandleFunc("GET /metrics", apiCfg.handlerCount)
-	mux.HandleFunc("POST /reset", apiCfg.handlerReset)
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerCount)
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
 
