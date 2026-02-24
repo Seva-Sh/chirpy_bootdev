@@ -1,15 +1,22 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
+
+	"github.com/Seva-Sh/chirpy_bootdev/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 // stateful config
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	db             *database.Queries
 }
 
 // middleware pattern that wraps handlers and increments the counter
@@ -47,9 +54,23 @@ func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	godotenv.Load()
 	port := "8080"
 	mux := http.NewServeMux()
-	apiCfg := &apiConfig{}
+
+	// get db_url from the environment
+	dbURL := os.Getenv("DB_URL")
+
+	// open connection to a database
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatal("Failed to open the Database Connection:", err)
+	}
+
+	dbQueries := database.New(db)
+
+	// initialize api config
+	apiCfg := &apiConfig{db: dbQueries}
 
 	srv := &http.Server{
 		Addr:    ":" + port,
