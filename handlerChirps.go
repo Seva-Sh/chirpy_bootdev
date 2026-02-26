@@ -42,19 +42,30 @@ func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(params.Body) > 140 {
+	body := strings.TrimSpace(params.Body)
+
+	if len(body) == 0 {
+		respondWithError(w, http.StatusBadRequest, "Chirp is empty")
+		return
+	} else if len(body) > 140 {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 		return
 	} else {
-		cleanedStr := cleanString(params.Body)
+		cleanedStr := cleanString(body)
 		newChirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 			Body:   cleanedStr,
 			UserID: params.UserID,
 		})
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Error creating a chirp")
+			respondWithError(w, http.StatusInternalServerError, "Error creating a chirp")
 			return
 		}
-		respondWithJSON(w, http.StatusCreated, newChirp)
+		respondWithJSON(w, http.StatusCreated, chirpResponse{
+			ID:        newChirp.ID,
+			CreatedAt: newChirp.CreatedAt,
+			UpdatedAt: newChirp.UpdatedAt,
+			Body:      newChirp.Body,
+			UserID:    newChirp.UserID,
+		})
 	}
 }
