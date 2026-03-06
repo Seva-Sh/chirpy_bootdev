@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Seva-Sh/chirpy_bootdev/internal/auth"
 	"github.com/Seva-Sh/chirpy_bootdev/internal/database"
-	"github.com/google/uuid"
 )
 
 // helper func that responds with cleaned JSON
@@ -30,13 +30,26 @@ func cleanString(s string) string {
 
 func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
+	}
+
+	// obtain token string
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Could not retrieve token")
+		return
+	}
+
+	// obtain userID
+	userID, err := auth.ValidateJWT(tokenString, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Error validating user")
+		return
 	}
 
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Error decoding parameters")
 		return
@@ -54,7 +67,7 @@ func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
 		cleanedStr := cleanString(body)
 		newChirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 			Body:   cleanedStr,
-			UserID: params.UserID,
+			UserID: userID,
 		})
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "Error creating a chirp")

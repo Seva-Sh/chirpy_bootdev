@@ -17,6 +17,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	platform       string
+	jwtSecret      string
 }
 
 // middleware pattern that wraps handlers and increments the counter
@@ -38,6 +39,9 @@ func main() {
 	// get PLATFORM evironment
 	plt := os.Getenv("PLATFORM")
 
+	// get JWT_SECRET from the env
+	jwtSec := os.Getenv("JWT_SECRET")
+
 	// open connection to a database
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -47,7 +51,7 @@ func main() {
 	dbQueries := database.New(db)
 
 	// initialize api config
-	apiCfg := &apiConfig{db: dbQueries, platform: plt}
+	apiCfg := &apiConfig{db: dbQueries, platform: plt, jwtSecret: jwtSec}
 
 	srv := &http.Server{
 		Addr:    ":" + port,
