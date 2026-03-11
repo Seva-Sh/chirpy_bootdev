@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/Seva-Sh/chirpy_bootdev/internal/auth"
+	"github.com/Seva-Sh/chirpy_bootdev/internal/database"
 )
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Password         string `json:"password"`
-		Email            string `json:"email"`
-		ExpiresInSeconds *int   `json:"expires_in_seconds"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -35,25 +35,32 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expiresIn := time.Hour
-	if params.ExpiresInSeconds != nil {
-		if *params.ExpiresInSeconds > 3600 {
-			expiresIn = time.Duration(3600) * time.Second
-		} else {
-			expiresIn = time.Duration(*params.ExpiresInSeconds) * time.Second
-		}
-	}
+	expiresIn := time.Duration(3600) * time.Second
+
+	// create a JWT token
 	jwt, err := auth.MakeJWT(user.ID, cfg.jwtSecret, expiresIn)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Error creating JWT")
 		return
 	}
 
+	// create a Refresh Token
+	refreshToken, err := cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     auth.MakeRefreshToken(),
+		UserID:    user.ID,
+		ExpiresAt: time.Now().AddDate(0, 0, 60),
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error creating RefreshToken")
+		return
+	}
+
 	respondWithJSON(w, http.StatusOK, User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-		Token:     jwt,
+		ID:           user.ID,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Email:        user.Email,
+		Token:        jwt,
+		RefreshToken: refreshToken.Token,
 	})
 }
