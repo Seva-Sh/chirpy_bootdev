@@ -18,6 +18,7 @@ type apiConfig struct {
 	db             *database.Queries
 	platform       string
 	jwtSecret      string
+	polkaKey       string
 }
 
 // middleware pattern that wraps handlers and increments the counter
@@ -42,6 +43,9 @@ func main() {
 	// get JWT_SECRET from the env
 	jwtSec := os.Getenv("JWT_SECRET")
 
+	// get POLKA_KEY from the env
+	polKey := os.Getenv("POLKA_KEY")
+
 	// open connection to a database
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -51,7 +55,7 @@ func main() {
 	dbQueries := database.New(db)
 
 	// initialize api config
-	apiCfg := &apiConfig{db: dbQueries, platform: plt, jwtSecret: jwtSec}
+	apiCfg := &apiConfig{db: dbQueries, platform: plt, jwtSecret: jwtSec, polkaKey: polKey}
 
 	srv := &http.Server{
 		Addr:    ":" + port,

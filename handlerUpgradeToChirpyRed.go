@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Seva-Sh/chirpy_bootdev/internal/auth"
 	"github.com/google/uuid"
 )
 
@@ -17,10 +18,20 @@ func (cfg *apiConfig) handlerUpgradeToChirpyRed(w http.ResponseWriter, r *http.R
 		}
 	}
 
+	// obtain apikey
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
+		return
+	} else if apiKey != cfg.polkaKey {
+		respondWithError(w, http.StatusUnauthorized, "API Key is invalid")
+		return
+	}
+
 	// decode request
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Error decoding parameters")
 		return
